@@ -53,7 +53,7 @@ def fetch_gameweek_dates():
 # Main Streamlit App
 # -----------------------------
 st.title("FPL League Standings")
-st.write(f"League ID: {LEAGUE_ID}")
+#st.write(f"League ID: {LEAGUE_ID}")
 
 # Fetch mapping of gameweeks to months
 gw_to_month = fetch_gameweek_dates()
