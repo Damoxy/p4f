@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import pandas as pd
-import matplotlib.pyplot as plt
 from datetime import datetime
 
 # -----------------------------
@@ -52,8 +51,7 @@ def fetch_gameweek_dates():
 # -----------------------------
 # Main Streamlit App
 # -----------------------------
-st.title("FPL League Standings")
-#st.write(f"League ID: {LEAGUE_ID}")
+st.title("P4Fun FPL League Standings")
 
 # Fetch mapping of gameweeks to months
 gw_to_month = fetch_gameweek_dates()
@@ -72,6 +70,11 @@ if data:
         for manager in managers:
             manager_id = manager.get('entry')
             manager_name = manager.get('player_name', 'Unknown')
+            team_name = manager.get('entry_name', 'Unknown Team')
+
+            # Unique identifier = team + manager
+            identifier = f"{team_name} ({manager_name})"
+
             history = fetch_player_history(manager_id)
 
             if history:
@@ -82,11 +85,11 @@ if data:
 
                     # --- Monthly scores ---
                     monthly_scores.setdefault(month, {})
-                    monthly_scores[month][manager_name] = monthly_scores[month].get(manager_name, 0) + points
+                    monthly_scores[month][identifier] = monthly_scores[month].get(identifier, 0) + points
 
                     # --- Weekly scores ---
                     weekly_scores.setdefault(gw, {})
-                    weekly_scores[gw][manager_name] = points
+                    weekly_scores[gw][identifier] = points
 
         # -----------------------------
         # Weekly winners
@@ -101,7 +104,10 @@ if data:
         # -----------------------------
         # Monthly winners
         # -----------------------------
-        monthly_df = pd.DataFrame({month: pd.Series(scores) for month, scores in monthly_scores.items()}).fillna(0)
+        monthly_df = pd.DataFrame(
+            {month: pd.Series(scores) for month, scores in monthly_scores.items()}
+        ).fillna(0)
+
         st.subheader("Monthly Winners")
         for month in monthly_df.columns:
             top_scorer = monthly_df[month].idxmax()
@@ -109,20 +115,14 @@ if data:
             st.write(f"**{month}:** {top_scorer} ({top_points} points)")
 
         # -----------------------------
-        # Monthly table
+        # Monthly + Total Table
         # -----------------------------
-        st.subheader("Monthly Points Table")
-        st.dataframe(monthly_df)
+        st.subheader("Monthly Points Table with Totals")
 
-        # -----------------------------
-        # Monthly trend plot
-        # -----------------------------
-        st.subheader("Monthly Points Trend")
-        fig, ax = plt.subplots(figsize=(12, 6))
-        monthly_df.T.plot(kind='bar', ax=ax)
-        ax.set_ylabel("Points")
-        ax.set_xlabel("Month")
-        ax.set_title("FPL Monthly Points by Manager")
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
+        # Add a "Total Points" column
+        monthly_df["Total Points"] = monthly_df.sum(axis=1)
 
+        # Sort entire table by Total Points (descending)
+        sorted_monthly_df = monthly_df.sort_values("Total Points", ascending=False)
+
+        st.dataframe(sorted_monthly_df)
